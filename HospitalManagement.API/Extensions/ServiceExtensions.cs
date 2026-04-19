@@ -6,11 +6,13 @@ using HospitalManagement.Infrastructure.Data;
 using HospitalManagement.Infrastructure.Identity;
 using HospitalManagement.Infrastructure.Repositories;
 using HospitalManagement.Infrastructure.Repositories.Implementations;
+using HospitalManagement.Infrastructure.Services;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using HospitalManagement.Infrastructure.Services;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+
 using System.Text;
 
 namespace HospitalManagement.API.Extensions
@@ -64,7 +66,7 @@ namespace HospitalManagement.API.Extensions
             services.AddScoped<IPasswordHasher, PasswordHasher>();
 
             // =========================
-            // 🔐 JWT AUTH
+            // 🔐 JWT CONFIG
             // =========================
             var jwtSection = configuration.GetSection("JwtSettings");
 
@@ -75,28 +77,37 @@ namespace HospitalManagement.API.Extensions
             if (string.IsNullOrWhiteSpace(key) || key.Length < 32)
                 throw new Exception("JWT Key must be at least 32 characters");
 
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false; // ✅ for local dev
+                options.SaveToken = true;
+
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    options.RequireHttpsMetadata = true;
-                    options.SaveToken = true;
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
 
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
+                    ValidIssuer = issuer,
+                    ValidAudience = audience,
 
-                        ValidIssuer = issuer,
-                        ValidAudience = audience,
-                        IssuerSigningKey = new SymmetricSecurityKey(
-                            Encoding.UTF8.GetBytes(key)
-                        ),
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(key)
+                    ),
 
-                        ClockSkew = TimeSpan.Zero
-                    };
-                });
+                    ClockSkew = TimeSpan.Zero,
+
+                    // 🔥 VERY IMPORTANT FIX
+                    RoleClaimType = ClaimTypes.Role,
+                    NameClaimType = ClaimTypes.Name,
+                };
+            });
 
             // =========================
             // 🌐 CORS
@@ -106,8 +117,8 @@ namespace HospitalManagement.API.Extensions
                 options.AddPolicy("AllowFrontend", policy =>
                 {
                     policy.AllowAnyOrigin()
-                          .AllowAnyMethod()
-                          .AllowAnyHeader();
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
                 });
             });
 
@@ -131,7 +142,7 @@ namespace HospitalManagement.API.Extensions
                     Scheme = "bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
-                    Description = "Enter: Bearer {token}"
+                    Description = "Enter: Bearer {your_token}"
                 });
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -145,7 +156,7 @@ namespace HospitalManagement.API.Extensions
                                 Id = "Bearer"
                             }
                         },
-                        Array.Empty<string>() // ✅ FIXED
+                        new string[] {}
                     }
                 });
             });

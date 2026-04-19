@@ -20,36 +20,32 @@ namespace HospitalManagement.Infrastructure.Identity
             _key = configuration["JwtSettings:Key"]!;
             _issuer = configuration["JwtSettings:Issuer"]!;
             _audience = configuration["JwtSettings:Audience"]!;
-            _expiryMinutes =
-                int.Parse(configuration["JwtSettings:ExpiryMinutes"] ?? "60");
+            _expiryMinutes = int.Parse(configuration["JwtSettings:ExpiryMinutes"] ?? "60");
         }
 
         public string GenerateToken(User user)
         {
-            if (string.IsNullOrWhiteSpace(_key) || _key.Length < 32)
-                throw new ApplicationException("JWT Key must be at least 32 characters.");
-
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Name),
                 new Claim(ClaimTypes.Email, user.Email),
+
+                // 🔥 CRITICAL FIX
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
+
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var credentials = new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key)),
-                SecurityAlgorithms.HmacSha256
-            );
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key));
 
             var token = new JwtSecurityToken(
                 issuer: _issuer,
                 audience: _audience,
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(_expiryMinutes),
-                signingCredentials: credentials
+                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);

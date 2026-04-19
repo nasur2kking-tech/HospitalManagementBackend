@@ -1,23 +1,26 @@
-﻿namespace HospitalManagement.Domain.Entities
+﻿using System;
+using System.Collections.Generic;
+
+namespace HospitalManagement.Domain.Entities
 {
     public class Patient
     {
-
-        public string Name { get; set; }
-        public int Age { get; set; }
-
         public int Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+        public int Age { get; set; }
 
         public int UserId { get; set; }
 
         public string Gender { get; set; } = string.Empty;
         public DateTime DateOfBirth { get; set; }
+
         public string Phone { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation
+        // ✅ NAVIGATION (FIXES YOUR ERRORS)
         public User User { get; set; } = null!;
 
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();

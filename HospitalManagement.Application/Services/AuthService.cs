@@ -7,43 +7,68 @@ using HospitalManagement.Domain.Enums;
 
 namespace HospitalManagement.Application.Services;
 
-public class AuthService(
-    IUserRepository userRepo,
-    IPasswordHasher hasher,
-    IJwtGenerator jwt
-) : IAuthService
+public class AuthService : IAuthService
 {
-    public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto, CancellationToken ct = default)
+    private readonly IUserRepository _userRepo;
+    private readonly IPasswordHasher _hasher;
+    private readonly IJwtGenerator _jwt;
+
+    public AuthService(
+        IUserRepository userRepo,
+        IPasswordHasher hasher,
+        IJwtGenerator jwt)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        _userRepo = userRepo;
+        _hasher = hasher;
+        _jwt = jwt;
+    }
 
-        var email = dto.Email?.Trim().ToLower()
-                    ?? throw new ApplicationException("Email is required.");
+ 
 
-        var name = dto.Name?.Trim()
-                   ?? throw new ApplicationException("Name is required.");
+    // =========================
+    // 🔹 REGISTER
+    // =========================
+    public async Task<AuthResponseDto> RegisterAsync(
+        RegisterDto dto,
+        CancellationToken ct = default)
+    {
+        if (dto == null)
+            throw new ApplicationException("Invalid request.");
+
+        var email = dto.Email?.Trim().ToLower();
+        var name = dto.Name?.Trim();
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ApplicationException("Email is required.");
+
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ApplicationException("Name is required.");
 
         if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
             throw new ApplicationException("Password must be at least 6 characters.");
 
-        if (await userRepo.ExistsByEmailAsync(email, ct))
+        // 🔥 CHECK EXISTING USER
+        if (await _userRepo.ExistsByEmailAsync(email, ct))
             throw new ApplicationException("User already exists.");
 
+        // 🔥 ROLE VALIDATION
         if (!Enum.TryParse<UserRole>(dto.Role, true, out var role))
-            throw new ApplicationException("Invalid role.");
+            throw new ApplicationException("Invalid role. Use Admin, Doctor, Receptionist.");
 
+        // 🔥 CREATE USER
         var user = new User
         {
             Name = name,
             Email = email,
-            PasswordHash = hasher.HashPassword(dto.Password),
+            PasswordHash = _hasher.HashPassword(dto.Password),
             Role = role,
             CreatedAt = DateTime.UtcNow
         };
 
-        await userRepo.AddAsync(user, ct);
+        await _userRepo.AddAsync(user, ct);
 
-        var token = jwt.GenerateToken(user);
+        // 🔥 GENERATE TOKEN
+        var token = _jwt.GenerateToken(user);
 
         return new AuthResponseDto
         {
@@ -53,22 +78,33 @@ public class AuthService(
         };
     }
 
-    public async Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken ct = default)
+    // =========================
+    // 🔹 LOGIN
+    // =========================
+    public async Task<AuthResponseDto> LoginAsync(
+        LoginDto dto,
+        CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(dto);
+        if (dto == null)
+            throw new ApplicationException("Invalid request.");
 
-        var email = dto.Email?.Trim().ToLower()
-                    ?? throw new ApplicationException("Email is required.");
+        var email = dto.Email?.Trim().ToLower();
+
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ApplicationException("Email is required.");
 
         if (string.IsNullOrWhiteSpace(dto.Password))
             throw new ApplicationException("Password is required.");
 
-        var user = await userRepo.GetByEmailAsync(email, ct);
+        var user = await _userRepo.GetByEmailAsync(email, ct);
 
-        if (user == null || !hasher.VerifyPassword(dto.Password, user.PasswordHash))
-            throw new ApplicationException("Invalid email or password.");
+        if (user == null)
+            throw new ApplicationException("User not found.");
 
-        var token = jwt.GenerateToken(user);
+        if (!_hasher.VerifyPassword(dto.Password, user.PasswordHash))
+            throw new ApplicationException("Invalid password.");
+
+        var token = _jwt.GenerateToken(user);
 
         return new AuthResponseDto
         {
@@ -78,12 +114,19 @@ public class AuthService(
         };
     }
 
-    public async Task<bool> EmailExistsAsync(string email, CancellationToken ct = default)
+    // =========================
+    // 🔹 CHECK EMAIL EXISTS
+    // =========================
+    public async Task<bool> EmailExistsAsync(
+        string email,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(email))
             return false;
 
-        return await userRepo.ExistsByEmailAsync(email.Trim().ToLower(), ct);
+        return await _userRepo.ExistsByEmailAsync(
+            email.Trim().ToLower(),
+            ct
+        );
     }
 }
-

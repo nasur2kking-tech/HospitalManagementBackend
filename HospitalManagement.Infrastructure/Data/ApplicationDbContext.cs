@@ -23,7 +23,7 @@ namespace HospitalManagement.Infrastructure.Data
             base.OnModelCreating(builder);
 
             // =========================
-            // 🔥 USER
+            // 🔹 USER
             // =========================
             builder.Entity<User>(entity =>
             {
@@ -38,26 +38,40 @@ namespace HospitalManagement.Infrastructure.Data
                       .HasMaxLength(150)
                       .IsUnicode(false);
 
+                entity.HasIndex(u => u.Email).IsUnique();
+
                 entity.Property(u => u.PasswordHash)
                       .IsRequired();
-
-                entity.HasIndex(u => u.Email)
-                      .IsUnique();
 
                 entity.Property(u => u.Role)
                       .HasConversion<string>();
             });
 
             // =========================
-            // 🔥 PATIENT
+            // 🔹 PATIENT (FIXED 🔥)
             // =========================
             builder.Entity<Patient>(entity =>
             {
                 entity.HasKey(p => p.Id);
 
-                entity.Property(p => p.Gender).HasMaxLength(10);
-                entity.Property(p => p.Phone).HasMaxLength(15);
-                entity.Property(p => p.Address).HasMaxLength(250);
+                entity.Property(p => p.Name)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(p => p.Gender)
+                      .IsRequired()
+                      .HasMaxLength(10);
+
+                entity.Property(p => p.Phone)
+                      .IsRequired()
+                      .HasMaxLength(15);
+
+                entity.Property(p => p.Address)
+                      .IsRequired()
+                      .HasMaxLength(300);
+
+                entity.Property(p => p.DateOfBirth)
+                      .IsRequired();
 
                 entity.HasIndex(p => p.UserId).IsUnique();
 
@@ -68,7 +82,7 @@ namespace HospitalManagement.Infrastructure.Data
             });
 
             // =========================
-            // 🔥 DOCTOR
+            // 🔹 DOCTOR
             // =========================
             builder.Entity<Doctor>(entity =>
             {
@@ -87,16 +101,17 @@ namespace HospitalManagement.Infrastructure.Data
             });
 
             // =========================
-            // 🔥 APPOINTMENT
+            // 🔹 APPOINTMENT
             // =========================
             builder.Entity<Appointment>(entity =>
             {
                 entity.HasKey(a => a.Id);
 
                 entity.Property(a => a.TimeSlot).HasMaxLength(50);
-                entity.Property(a => a.Status).HasConversion<string>();
 
-                // ✅ Prevent double booking
+                entity.Property(a => a.Status)
+                      .HasConversion<string>();
+
                 entity.HasIndex(a => new { a.DoctorId, a.AppointmentDate, a.TimeSlot })
                       .IsUnique();
 
@@ -112,7 +127,7 @@ namespace HospitalManagement.Infrastructure.Data
             });
 
             // =========================
-            // 🔥 BILL
+            // 🔹 BILL
             // =========================
             builder.Entity<Bill>(entity =>
             {
@@ -131,7 +146,7 @@ namespace HospitalManagement.Infrastructure.Data
             });
 
             // =========================
-            // 🔥 MEDICAL RECORD
+            // 🔹 MEDICAL RECORD
             // =========================
             builder.Entity<MedicalRecord>(entity =>
             {
@@ -147,7 +162,7 @@ namespace HospitalManagement.Infrastructure.Data
             });
 
             // =========================
-            // 🔥 DOCTOR SCHEDULE
+            // 🔹 DOCTOR SCHEDULE
             // =========================
             builder.Entity<DoctorSchedule>(entity =>
             {
@@ -155,7 +170,6 @@ namespace HospitalManagement.Infrastructure.Data
 
                 entity.Property(ds => ds.TimeSlot).HasMaxLength(50);
 
-                // ✅ Prevent duplicate schedule slots
                 entity.HasIndex(ds => new { ds.DoctorId, ds.AvailableDate, ds.TimeSlot })
                       .IsUnique();
 

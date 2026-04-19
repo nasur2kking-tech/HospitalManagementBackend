@@ -32,13 +32,13 @@ builder.Services.AddValidatorsFromAssemblyContaining<RegisterDto>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 // =========================
-// 🌐 CORS (🔥 VERY IMPORTANT)
+// 🌐 CORS
 // =========================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.AllowAnyOrigin()   // for now (dev)
+        policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -50,7 +50,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddApplicationServices(builder.Configuration);
 
 // =========================
-// 🚀 BUILD APP
+// 🚀 BUILD
 // =========================
 var app = builder.Build();
 
@@ -65,8 +65,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// 🔥 IMPORTANT ORDER
-app.UseCors("AllowFrontend");   // ✅ MUST BE BEFORE AUTH
+// 🔥 ORDER IS CRITICAL
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

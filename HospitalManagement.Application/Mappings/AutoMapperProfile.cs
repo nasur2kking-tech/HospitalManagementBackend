@@ -13,18 +13,15 @@ namespace HospitalManagement.Application.Mappings
     {
         public AutoMappingProfile()
         {
-            // =========================
             // 🔹 USER
-            // =========================
             CreateMap<User, UserDto>()
                 .ForMember(dest => dest.Role,
                     opt => opt.MapFrom(src => src.Role.ToString()));
 
-
-            // =========================
             // 🔹 PATIENT
-            // =========================
-            CreateMap<Patient, PatientResponseDto>();
+            CreateMap<Patient, PatientResponseDto>()
+                .ForMember(dest => dest.Name,
+                    opt => opt.MapFrom(src => src.Name));
 
             CreateMap<CreatePatientDto, Patient>();
 
@@ -32,18 +29,11 @@ namespace HospitalManagement.Application.Mappings
                 .ForAllMembers(opts =>
                     opts.Condition((src, dest, srcMember) => srcMember != null));
 
-
-            // =========================
             // 🔹 DOCTOR
-            // =========================
             CreateMap<Doctor, DoctorResponseDto>();
-
             CreateMap<CreateDoctorDto, Doctor>();
 
-
-            // =========================
             // 🔹 APPOINTMENT
-            // =========================
             CreateMap<Appointment, AppointmentResponseDto>()
                 .ForMember(dest => dest.Status,
                     opt => opt.MapFrom(src => src.Status.ToString()));
@@ -51,27 +41,19 @@ namespace HospitalManagement.Application.Mappings
             CreateMap<CreateAppointmentDto, Appointment>();
 
             CreateMap<UpdateAppointmentDto, Appointment>()
-                .ForMember(dest => dest.Status,
-                    opt => opt.Ignore()) // handled manually in service
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
                 .ForAllMembers(opts =>
                     opts.Condition((src, dest, srcMember) => srcMember != null));
 
-
-            // =========================
-            // 🔹 BILLING
-            // =========================
+            // 🔹 BILL
             CreateMap<Bill, BillResponseDto>()
                 .ForMember(dest => dest.Status,
                     opt => opt.MapFrom(src => src.Status.ToString()));
 
             CreateMap<CreateBillDto, Bill>();
 
-
-            // =========================
             // 🔹 MEDICAL RECORD
-            // =========================
             CreateMap<MedicalRecord, MedicalRecordDto>();
-
             CreateMap<CreateMedicalRecordDto, MedicalRecord>();
         }
     }
