@@ -11,10 +11,7 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ======================================================
-// CONTROLLERS
-// ======================================================
-
+// Controllers
 builder.Services.AddControllers();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -22,45 +19,29 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.SuppressModelStateInvalidFilter = false;
 });
 
-// ======================================================
-// FLUENT VALIDATION
-// ======================================================
-
+// FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
-
 builder.Services.AddValidatorsFromAssemblyContaining<PatientValidator>();
 
-// ======================================================
-// AUTOMAPPER
-// ======================================================
-
+// AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
-// ======================================================
-// APPLICATION + INFRASTRUCTURE SERVICES
-// ======================================================
+// Application Services
+builder.Services.AddApplicationServices(builder.Configuration);
 
-builder.Services.AddApplicationServices(
-    builder.Configuration);
-
-// ======================================================
-// SWAGGER
-// ======================================================
-
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc(
-        "v1",
+    options.SwaggerDoc("v1",
         new OpenApiInfo
         {
             Title = "Hospital Management API",
             Version = "v1"
         });
 
-    options.AddSecurityDefinition(
-        "Bearer",
+    options.AddSecurityDefinition("Bearer",
         new OpenApiSecurityScheme
         {
             Name = "Authorization",
@@ -68,8 +49,7 @@ builder.Services.AddSwaggerGen(options =>
             Scheme = "bearer",
             BearerFormat = "JWT",
             In = ParameterLocation.Header,
-            Description =
-                "Enter JWT token.\n\nExample:\nBearer eyJhbGc..."
+            Description = "JWT Authorization header using the Bearer scheme."
         });
 
     options.AddSecurityRequirement(
@@ -78,80 +58,52 @@ builder.Services.AddSwaggerGen(options =>
             {
                 new OpenApiSecurityScheme
                 {
-                    Reference =
-                        new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
                 },
                 Array.Empty<string>()
             }
         });
 });
 
-// ======================================================
-// BUILD APPLICATION
-// ======================================================
-
 var app = builder.Build();
 
-// ======================================================
-// SWAGGER (IMPORTANT FOR RENDER)
-// ======================================================
-
+// Swagger
 app.UseSwagger();
-app.UseSwaggerUI(options =>
+
+app.UseSwaggerUI(c =>
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Hospital Management API v1");
-    options.RoutePrefix = "swagger";
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hospital Management API v1");
 });
 
-// ======================================================
-// STATIC FILES
-// ======================================================
+// Root endpoint
+app.MapGet("/", () =>
+{
+    return Results.Ok(new
+    {
+        Status = "Running",
+        Swagger = "/swagger"
+    });
+});
 
-var uploadsPath =
-    Path.Combine(
-        builder.Environment.ContentRootPath,
-        "Uploads");
+// Uploads folder
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "Uploads");
 
 if (!Directory.Exists(uploadsPath))
 {
     Directory.CreateDirectory(uploadsPath);
 }
 
-app.UseStaticFiles(
-    new StaticFileOptions
-    {
-        FileProvider =
-            new PhysicalFileProvider(
-                uploadsPath),
-
-        RequestPath = "/Uploads"
-    });
-
-// ======================================================
-// CUSTOM PIPELINE
-// ======================================================
-
-app.UseApplicationPipeline();
-
-// ======================================================
-// TEST ROOT ENDPOINT
-// ======================================================
-
-app.MapGet("/", () =>
+app.UseStaticFiles(new StaticFileOptions
 {
-    return Results.Ok(new
-    {
-        Message = "Hospital Management API is running",
-        Swagger = "/swagger"
-    });
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/Uploads"
 });
 
-// ======================================================
-// RUN APPLICATION
-// ======================================================
+// Existing custom pipeline
+app.UseApplicationPipeline();
 
 app.Run();
