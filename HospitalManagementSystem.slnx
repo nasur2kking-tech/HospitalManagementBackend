@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Dockerfile" />
+  </Folder>
   <Project Path="HospitalManagement.API/HospitalManagement.API.csproj" />
   <Project Path="HospitalManagement.Application/HospitalManagement.Application.csproj" />
   <Project Path="HospitalManagement.Domain/HospitalManagement.Domain.csproj" />

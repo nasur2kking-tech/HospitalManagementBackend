@@ -97,6 +97,17 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // ======================================================
+// SWAGGER (IMPORTANT FOR RENDER)
+// ======================================================
+
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Hospital Management API v1");
+    options.RoutePrefix = "swagger";
+});
+
+// ======================================================
 // STATIC FILES
 // ======================================================
 
@@ -125,6 +136,19 @@ app.UseStaticFiles(
 // ======================================================
 
 app.UseApplicationPipeline();
+
+// ======================================================
+// TEST ROOT ENDPOINT
+// ======================================================
+
+app.MapGet("/", () =>
+{
+    return Results.Ok(new
+    {
+        Message = "Hospital Management API is running",
+        Swagger = "/swagger"
+    });
+});
 
 // ======================================================
 // RUN APPLICATION
