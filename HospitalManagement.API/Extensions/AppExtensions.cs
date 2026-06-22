@@ -12,6 +12,7 @@ namespace HospitalManagement.API.Extensions
             // =====================================
             // GLOBAL MIDDLEWARE
             // =====================================
+
             app.UseMiddleware<ExceptionMiddleware>();
 
             app.UseMiddleware<LoggingMiddleware>();
@@ -20,25 +21,27 @@ namespace HospitalManagement.API.Extensions
             // =====================================
             // SWAGGER
             // =====================================
-            if (env.IsDevelopment())
+
+            app.UseSwagger();
+
+            app.UseSwaggerUI(c =>
             {
-                app.UseSwagger();
+                c.SwaggerEndpoint(
+                    "/swagger/v1/swagger.json",
+                    "HMS API v1");
 
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint(
-                        "/swagger/v1/swagger.json",
-                        "HMS API v1");
-
-                    c.RoutePrefix = "swagger";
-                });
-            }
+                c.RoutePrefix = "swagger";
+            });
 
 
             // =====================================
             // SECURITY
             // =====================================
-            app.UseHttpsRedirection();
+
+            if (env.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
 
             if (!env.IsDevelopment())
             {
@@ -49,18 +52,21 @@ namespace HospitalManagement.API.Extensions
             // =====================================
             // ROUTING
             // =====================================
+
             app.UseRouting();
 
 
             // =====================================
             // CORS
             // =====================================
+
             app.UseCors("AllowFrontend");
 
 
             // =====================================
             // AUTHENTICATION
             // =====================================
+
             app.UseAuthentication();
 
             app.UseAuthorization();
@@ -69,6 +75,7 @@ namespace HospitalManagement.API.Extensions
             // =====================================
             // ENDPOINTS
             // =====================================
+
             app.MapControllers();
 
             app.MapHealthChecks("/health");
