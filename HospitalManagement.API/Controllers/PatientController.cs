@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using HospitalManagement.Application.Common;
 using HospitalManagement.Application.DTOs.Patient;
 using HospitalManagement.Application.Interfaces.Services;
-using HospitalManagement.Application.Common;
 
 namespace HospitalManagement.API.Controllers
 {
@@ -20,77 +20,106 @@ namespace HospitalManagement.API.Controllers
         }
 
         // =========================
-        // 🔹 GET ALL PATIENTS
+        // GET ALL PATIENTS
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Doctor,Receptionist")]
         public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
         {
-            var patients = await _service.GetAllAsync(pagination);
-
-            return Ok(new
+            try
             {
-                success = true,
-                data = patients
-            });
+                var patients = await _service.GetAllAsync(pagination);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = patients
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
         }
 
         // =========================
-        // 🔹 GET PATIENT BY ID
+        // GET PATIENT BY ID
         // =========================
         [HttpGet("{id:int}")]
         [Authorize(Roles = "Admin,Doctor,Receptionist")]
         public async Task<IActionResult> Get(int id)
         {
-            var patient = await _service.GetByIdAsync(id);
+            try
+            {
+                var patient = await _service.GetByIdAsync(id);
 
-            if (patient == null)
+                return Ok(new
+                {
+                    success = true,
+                    data = patient
+                });
+            }
+            catch (Exception ex)
             {
                 return NotFound(new
                 {
                     success = false,
-                    message = "Patient not found"
+                    message = ex.Message
                 });
             }
-
-            return Ok(new
-            {
-                success = true,
-                data = patient
-            });
         }
 
         // =========================
-        // 🔹 CREATE PATIENT
+        // CREATE PATIENT
         // =========================
         [HttpPost]
         [Authorize(Roles = "Admin,Receptionist")]
         public async Task<IActionResult> Create([FromBody] CreatePatientDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    errors = ModelState
+                        .Where(x => x.Value != null && x.Value.Errors.Count > 0)
+                        .ToDictionary(
+                            x => x.Key,
+                            x => x.Value!.Errors.Select(e => e.ErrorMessage))
+                });
+            }
+
             try
             {
-                var createdPatient = await _service.CreateAsync(dto);
+                var patient = await _service.CreateAsync(dto);
 
-                return CreatedAtAction(nameof(Get), new { id = createdPatient.Id }, new
-                {
-                    success = true,
-                    message = "Patient created successfully",
-                    data = createdPatient
-                });
+                return CreatedAtAction(
+                    nameof(Get),
+                    new { id = patient.Id },
+                    new
+                    {
+                        success = true,
+                        message = "Patient created successfully",
+                        data = patient
+                    });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
+                return BadRequest(new
                 {
                     success = false,
                     message = ex.Message,
-                    error = ex.InnerException?.Message
+                    inner = ex.InnerException?.Message
                 });
             }
         }
 
         // =========================
-        // 🔹 UPDATE PATIENT
+        // UPDATE PATIENT
         // =========================
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Admin,Receptionist")]
@@ -98,17 +127,6 @@ namespace HospitalManagement.API.Controllers
         {
             try
             {
-                var existing = await _service.GetByIdAsync(id);
-
-                if (existing == null)
-                {
-                    return NotFound(new
-                    {
-                        success = false,
-                        message = "Patient not found"
-                    });
-                }
-
                 await _service.UpdateAsync(id, dto);
 
                 return Ok(new
@@ -119,17 +137,16 @@ namespace HospitalManagement.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
+                return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message,
-                    error = ex.InnerException?.Message
+                    message = ex.Message
                 });
             }
         }
 
         // =========================
-        // 🔹 DELETE PATIENT
+        // DELETE PATIENT
         // =========================
         [HttpDelete("{id:int}")]
         [Authorize(Roles = "Admin")]
@@ -137,17 +154,6 @@ namespace HospitalManagement.API.Controllers
         {
             try
             {
-                var existing = await _service.GetByIdAsync(id);
-
-                if (existing == null)
-                {
-                    return NotFound(new
-                    {
-                        success = false,
-                        message = "Patient not found"
-                    });
-                }
-
                 await _service.DeleteAsync(id);
 
                 return Ok(new
@@ -158,11 +164,10 @@ namespace HospitalManagement.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
+                return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message,
-                    error = ex.InnerException?.Message
+                    message = ex.Message
                 });
             }
         }

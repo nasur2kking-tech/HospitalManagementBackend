@@ -2,16 +2,15 @@
 using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Application.Interfaces.Services;
 using HospitalManagement.Application.Services;
+
 using HospitalManagement.Infrastructure.Data;
 using HospitalManagement.Infrastructure.Identity;
-using HospitalManagement.Infrastructure.Repositories;
 using HospitalManagement.Infrastructure.Repositories.Implementations;
 using HospitalManagement.Infrastructure.Services;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 
 using System.Text;
 
@@ -23,147 +22,139 @@ namespace HospitalManagement.API.Extensions
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            // =========================
-            // 🔹 DATABASE
-            // =========================
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            // =====================================
+            // DATABASE
+            // =====================================
+
+            var connectionString =
+                configuration.GetConnectionString("DefaultConnection");
 
             if (string.IsNullOrWhiteSpace(connectionString))
-                throw new Exception("Database connection string is missing");
+            {
+                throw new Exception(
+                    "Database connection string is missing.");
+            }
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMySql(
                     connectionString,
-                    ServerVersion.AutoDetect(connectionString)
-                ));
+                    ServerVersion.AutoDetect(connectionString)));
 
-            // =========================
-            // 🔹 REPOSITORIES
-            // =========================
+            // =====================================
+            // REPOSITORIES
+            // =====================================
+
             services.AddScoped<IUserRepository, UserRepository>();
+
             services.AddScoped<IPatientRepository, PatientRepository>();
+
             services.AddScoped<IDoctorRepository, DoctorRepository>();
+
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+
             services.AddScoped<IBillingRepository, BillingRepository>();
+
             services.AddScoped<IMedicalRecordRepository, MedicalRecordRepository>();
 
-            // =========================
-            // 🔹 SERVICES
-            // =========================
+            services.AddScoped<IDoctorScheduleRepository, DoctorScheduleRepository>();
+
+            // =====================================
+            // SERVICES
+            // =====================================
+
             services.AddScoped<IAuthService, AuthService>();
+
             services.AddScoped<IUserService, UserService>();
+
             services.AddScoped<IPatientService, PatientService>();
+
             services.AddScoped<IDoctorService, DoctorService>();
+
             services.AddScoped<IAppointmentService, AppointmentService>();
+
             services.AddScoped<IBillingService, BillingService>();
+
             services.AddScoped<IMedicalRecordService, MedicalRecordService>();
+
+            services.AddScoped<IDoctorScheduleService, DoctorScheduleService>();
+
             services.AddScoped<IReportService, ReportService>();
 
-            // =========================
-            // 🔐 SECURITY SERVICES
-            // =========================
+            // =====================================
+            // SECURITY
+            // =====================================
+
             services.AddScoped<IJwtGenerator, JwtGenerator>();
+
             services.AddScoped<IPasswordHasher, PasswordHasher>();
 
-            // =========================
-            // 🔐 JWT CONFIG
-            // =========================
-            var jwtSection = configuration.GetSection("JwtSettings");
+            var jwtSection = configuration.GetSection("Jwt");
 
-            var key = jwtSection["Key"];
-            var issuer = jwtSection["Issuer"];
-            var audience = jwtSection["Audience"];
+            var key =
+                Encoding.UTF8.GetBytes(jwtSection["Key"]!);
 
-            if (string.IsNullOrWhiteSpace(key) || key.Length < 32)
-                throw new Exception("JWT Key must be at least 32 characters");
-
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(options =>
-            {
-                options.RequireHttpsMetadata = false; // ✅ for local dev
-                options.SaveToken = true;
-
-                options.TokenValidationParameters = new TokenValidationParameters
+            services
+                .AddAuthentication(options =>
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
+                    options.DefaultAuthenticateScheme =
+                        JwtBearerDefaults.AuthenticationScheme;
 
-                    ValidIssuer = issuer,
-                    ValidAudience = audience,
+                    options.DefaultChallengeScheme =
+                        JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddJwtBearer(options =>
+                {
+                    options.RequireHttpsMetadata = false;
 
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(key)
-                    ),
+                    options.SaveToken = true;
 
-                    ClockSkew = TimeSpan.Zero,
+                    options.TokenValidationParameters =
+                        new TokenValidationParameters
+                        {
+                            ValidateIssuerSigningKey = true,
 
-                    // 🔥 VERY IMPORTANT FIX
-                    RoleClaimType = ClaimTypes.Role,
-                    NameClaimType = ClaimTypes.Name,
-                };
-            });
+                            ValidateIssuer = true,
 
-            // =========================
-            // 🌐 CORS
-            // =========================
+                            ValidateAudience = true,
+
+                            ValidateLifetime = true,
+
+                            ValidIssuer =
+                                jwtSection["Issuer"],
+
+                            ValidAudience =
+                                jwtSection["Audience"],
+
+                            IssuerSigningKey =
+                                new SymmetricSecurityKey(key),
+
+                            ClockSkew =
+                                TimeSpan.Zero
+                        };
+                });
+
+            services.AddAuthorization();
+
+            // =====================================
+            // CORS
+            // =====================================
+
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowFrontend", policy =>
-                {
-                    policy.AllowAnyOrigin()
-                          .AllowAnyHeader()
-                          .AllowAnyMethod();
-                });
-            });
-
-            // =========================
-            // 📄 SWAGGER + JWT
-            // =========================
-            services.AddEndpointsApiExplorer();
-
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo
-                {
-                    Title = "Hospital Management API",
-                    Version = "v1"
-                });
-
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
-                    BearerFormat = "JWT",
-                    In = ParameterLocation.Header,
-                    Description = "Enter: Bearer {your_token}"
-                });
-
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
+                options.AddPolicy(
+                    "AllowFrontend",
+                    policy =>
                     {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        new string[] {}
-                    }
-                });
+                        policy.AllowAnyOrigin()
+                              .AllowAnyHeader()
+                              .AllowAnyMethod();
+                    });
             });
 
-            // =========================
-            // 🔹 HEALTH CHECKS
-            // =========================
+            // =====================================
+            // HEALTH CHECKS
+            // =====================================
+
             services.AddHealthChecks();
 
             return services;

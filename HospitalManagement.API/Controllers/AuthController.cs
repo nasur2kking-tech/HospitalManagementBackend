@@ -1,102 +1,103 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using HospitalManagement.Application.DTOs.Auth;
+﻿using HospitalManagement.Application.DTOs.Auth;
 using HospitalManagement.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace HospitalManagement.API.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
-    [Produces("application/json")]
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly IAuthService _service;
+        private readonly IAuthService _authService;
 
-        public AuthController(IAuthService service)
+        public AuthController(IAuthService authService)
         {
-            _service = service;
+            _authService = authService;
         }
 
-        /// <summary>
-        /// Register a new user
-        /// </summary>
-        [AllowAnonymous] // 🔥 Important
+        // =========================
+        // REGISTER
+        // =========================
         [HttpPost("register")]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        public async Task<IActionResult> Register(
+            [FromBody] RegisterDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "Validation failed",
-                    errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                });
-            }
+            var result = await _authService.RegisterAsync(dto);
 
-            try
-            {
-                var result = await _service.RegisterAsync(dto);
-
-                return StatusCode(StatusCodes.Status201Created, new
-                {
-                    success = true,
-                    message = "User registered successfully",
-                    data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
+            return Ok(result);
         }
 
-        /// <summary>
-        /// Login user and get JWT token
-        /// </summary>
-        [AllowAnonymous] // 🔥 Important
+        // =========================
+        // LOGIN
+        // =========================
         [HttpPost("login")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+        public async Task<IActionResult> Login(
+            [FromBody] LoginDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "Validation failed",
-                    errors = ModelState.Values.SelectMany(v => v.Errors)
-                                              .Select(e => e.ErrorMessage)
-                });
-            }
+            var result = await _authService.LoginAsync(dto);
 
-            try
-            {
-                var result = await _service.LoginAsync(dto);
+            return Ok(result);
+        }
 
-                return Ok(new
-                {
-                    success = true,
-                    message = "Login successful",
-                    data = result
-                });
-            }
-            catch (Exception ex)
+        // =========================
+        // REFRESH TOKEN
+        // =========================
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(
+            [FromBody] RefreshTokenRequestDto dto)
+        {
+            var result = await _authService.RefreshTokenAsync(dto);
+
+            return Ok(result);
+        }
+
+        // =========================
+        // LOGOUT
+        // =========================
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout(
+            [FromBody] string refreshToken)
+        {
+            await _authService.LogoutAsync(refreshToken);
+
+            return Ok(new
             {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
+                Message = "Logout successful"
+            });
+        }
+
+        // =========================
+        // FORGOT PASSWORD
+        // =========================
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(
+            [FromQuery] string email)
+        {
+            var token = await _authService.ForgotPasswordAsync(email);
+
+            return Ok(new
+            {
+                Message = "Reset token generated",
+                Token = token
+            });
+        }
+
+        // =========================
+        // RESET PASSWORD
+        // =========================
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(
+            [FromQuery] string token,
+            [FromQuery] string newPassword)
+        {
+            await _authService.ResetPasswordAsync(
+                token,
+                newPassword);
+
+            return Ok(new
+            {
+                Message = "Password reset successful"
+            });
         }
     }
 }

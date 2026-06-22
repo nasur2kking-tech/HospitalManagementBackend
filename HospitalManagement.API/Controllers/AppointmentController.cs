@@ -15,19 +15,21 @@ namespace HospitalManagement.API.Controllers
     {
         private readonly IAppointmentService _service;
 
-        public AppointmentController(IAppointmentService service)
+    public AppointmentController(IAppointmentService service)
         {
             _service = service;
         }
 
         /// <summary>
-        /// Get all appointments (with pagination)
+        /// Get all appointments (Admin, Doctor, Receptionist)
         /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin,Doctor,Receptionist")]
-        public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
+        public async Task<IActionResult> GetAll(
+            [FromQuery] PaginationParams pagination)
         {
-            if (pagination.PageNumber <= 0 || pagination.PageSize <= 0)
+            if (pagination.PageNumber <= 0 ||
+                pagination.PageSize <= 0)
             {
                 return BadRequest(new
                 {
@@ -36,7 +38,10 @@ namespace HospitalManagement.API.Controllers
                 });
             }
 
-            var appointments = await _service.GetAllAsync(pagination);
+            var appointments =
+                await _service.GetAllAsync(
+                    pagination
+                );
 
             return Ok(new
             {
@@ -46,16 +51,24 @@ namespace HospitalManagement.API.Controllers
         }
 
         /// <summary>
-        /// Get appointment by ID
+        /// Get appointment by id
         /// </summary>
         [HttpGet("{id:int}")]
         [Authorize(Roles = "Admin,Doctor,Receptionist,Patient")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetById(
+            int id)
         {
-            var appointment = await _service.GetByIdAsync(id);
+            var appointment =
+                await _service.GetByIdAsync(id);
 
             if (appointment == null)
-                return NotFound(new { success = false, message = "Appointment not found" });
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Appointment not found"
+                });
+            }
 
             return Ok(new
             {
@@ -65,57 +78,145 @@ namespace HospitalManagement.API.Controllers
         }
 
         /// <summary>
-        /// Create a new appointment
+        /// Get appointments by doctor
+        /// </summary>
+        [HttpGet("doctor/{doctorId:int}")]
+        [Authorize(Roles = "Admin,Doctor")]
+        public async Task<IActionResult> GetByDoctor(
+            int doctorId)
+        {
+            var appointments =
+                await _service.GetByDoctorIdAsync(
+                    doctorId
+                );
+
+            return Ok(new
+            {
+                success = true,
+                data = appointments
+            });
+        }
+
+        /// <summary>
+        /// Get logged-in patient's appointments
+        /// </summary>
+        [HttpGet("my-appointments")]
+        [Authorize(Roles = "Patient")]
+        public async Task<IActionResult> GetMyAppointments()
+        {
+            var userId =
+                User.FindFirst(ClaimTypes.NameIdentifier)
+                    ?.Value;
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Invalid user token"
+                });
+            }
+
+            var appointments =
+                await _service.GetByPatientIdAsync(
+                    int.Parse(userId)
+                );
+
+            return Ok(new
+            {
+                success = true,
+                data = appointments
+            });
+        }
+
+        /// <summary>
+        /// Create appointment
         /// </summary>
         [HttpPost]
         [Authorize(Roles = "Admin,Receptionist,Patient")]
-        public async Task<IActionResult> Create([FromBody] CreateAppointmentDto dto)
+        public async Task<IActionResult> Create(
+            [FromBody] CreateAppointmentDto dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { success = false, message = "Invalid data", errors = ModelState });
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid data",
+                    errors = ModelState
+                });
+            }
 
             try
             {
-                var created = await _service.CreateAsync(dto);
+                var appointment =
+                    await _service.CreateAsync(dto);
 
-                return CreatedAtAction(nameof(GetById), new { id = created.Id }, new
-                {
-                    success = true,
-                    message = "Appointment booked successfully",
-                    data = created
-                });
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new
+                    {
+                        id = appointment.Id
+                    },
+                    new
+                    {
+                        success = true,
+                        message =
+                            "Appointment booked successfully",
+                        data = appointment
+                    }
+                );
             }
             catch (Exception ex)
             {
                 return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message // handles double booking etc.
+                    message = ex.Message
                 });
             }
         }
 
         /// <summary>
-        /// Update appointment (reschedule)
+        /// Update appointment
         /// </summary>
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Admin,Receptionist")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateAppointmentDto dto)
+        public async Task<IActionResult> Update(
+            int id,
+            [FromBody] UpdateAppointmentDto dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    errors = ModelState
+                });
+            }
 
-            var existing = await _service.GetByIdAsync(id);
+            var existing =
+                await _service.GetByIdAsync(id);
 
             if (existing == null)
-                return NotFound(new { success = false, message = "Appointment not found" });
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Appointment not found"
+                });
+            }
 
-            await _service.UpdateAsync(id, dto);
+            await _service.UpdateAsync(
+                id,
+                dto
+            );
 
             return Ok(new
             {
                 success = true,
-                message = "Appointment updated successfully"
+                message =
+                    "Appointment updated successfully"
             });
         }
 
@@ -124,20 +225,31 @@ namespace HospitalManagement.API.Controllers
         /// </summary>
         [HttpDelete("{id:int}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(
+            int id)
         {
-            var existing = await _service.GetByIdAsync(id);
+            var existing =
+                await _service.GetByIdAsync(id);
 
             if (existing == null)
-                return NotFound(new { success = false, message = "Appointment not found" });
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Appointment not found"
+                });
+            }
 
             await _service.DeleteAsync(id);
 
             return Ok(new
             {
                 success = true,
-                message = "Appointment deleted successfully"
+                message =
+                    "Appointment deleted successfully"
             });
         }
     }
+
+
 }

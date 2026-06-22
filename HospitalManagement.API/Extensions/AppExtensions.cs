@@ -1,37 +1,43 @@
 ﻿using HospitalManagement.API.Middleware;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
 
 namespace HospitalManagement.API.Extensions
 {
     public static class AppExtensions
     {
-        public static void UseApplicationPipeline(this WebApplication app)
+        public static void UseApplicationPipeline(
+            this WebApplication app)
         {
             var env = app.Environment;
 
-            // =========================
-            // 🔥 GLOBAL MIDDLEWARE
-            // =========================
-            app.UseMiddleware<ExceptionMiddleware>(); // MUST be FIRST
+            // =====================================
+            // GLOBAL MIDDLEWARE
+            // =====================================
+            app.UseMiddleware<ExceptionMiddleware>();
+
             app.UseMiddleware<LoggingMiddleware>();
 
-            // =========================
-            // 🔹 SWAGGER (ONLY DEV)
-            // =========================
+
+            // =====================================
+            // SWAGGER
+            // =====================================
             if (env.IsDevelopment())
             {
                 app.UseSwagger();
+
                 app.UseSwaggerUI(c =>
                 {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "HMS API v1");
+                    c.SwaggerEndpoint(
+                        "/swagger/v1/swagger.json",
+                        "HMS API v1");
+
                     c.RoutePrefix = "swagger";
                 });
             }
 
-            // =========================
-            // 🔹 SECURITY
-            // =========================
+
+            // =====================================
+            // SECURITY
+            // =====================================
             app.UseHttpsRedirection();
 
             if (!env.IsDevelopment())
@@ -39,21 +45,32 @@ namespace HospitalManagement.API.Extensions
                 app.UseHsts();
             }
 
-            // =========================
-            // 🔹 CORS
-            // =========================
+
+            // =====================================
+            // ROUTING
+            // =====================================
+            app.UseRouting();
+
+
+            // =====================================
+            // CORS
+            // =====================================
             app.UseCors("AllowFrontend");
 
-            // =========================
-            // 🔹 AUTH
-            // =========================
+
+            // =====================================
+            // AUTHENTICATION
+            // =====================================
             app.UseAuthentication();
+
             app.UseAuthorization();
 
-            // =========================
-            // 🔹 ENDPOINTS
-            // =========================
+
+            // =====================================
+            // ENDPOINTS
+            // =====================================
             app.MapControllers();
+
             app.MapHealthChecks("/health");
         }
     }

@@ -14,9 +14,14 @@ namespace HospitalManagement.Infrastructure.Repositories.Implementations
             _context = context;
         }
 
-        public async Task<(IEnumerable<User>, int)> GetAllAsync(int pageNumber, int pageSize, CancellationToken ct = default)
+        public async Task<(IEnumerable<User>, int)> GetAllAsync(
+            int pageNumber,
+            int pageSize,
+            CancellationToken ct = default)
         {
-            var query = _context.Users.AsNoTracking();
+            var query = _context.Users
+                .Where(u => !u.IsDeleted)
+                .AsNoTracking();
 
             var totalCount = await query.CountAsync(ct);
 
@@ -28,45 +33,95 @@ namespace HospitalManagement.Infrastructure.Repositories.Implementations
             return (items, totalCount);
         }
 
-        public async Task<User?> GetByIdAsync(int id, CancellationToken ct = default)
+        public async Task<User?> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
             return await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == id, ct);
+                .FirstOrDefaultAsync(
+                    u => u.Id == id && !u.IsDeleted,
+                    ct);
         }
 
-        public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
+        public async Task<User?> GetByEmailAsync(
+            string email,
+            CancellationToken ct = default)
         {
             return await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Email == email, ct);
+                .FirstOrDefaultAsync(
+                    u => u.Email == email && !u.IsDeleted,
+                    ct);
         }
 
-        public async Task<bool> ExistsByIdAsync(int id, CancellationToken ct = default)
+        public async Task<User?> GetByResetTokenAsync(
+            string token,
+            CancellationToken ct = default)
         {
-            return await _context.Users.AnyAsync(u => u.Id == id, ct);
+            return await _context.Users
+                .FirstOrDefaultAsync(
+                    u => u.ResetToken == token && !u.IsDeleted,
+                    ct);
         }
 
-        public async Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
+        public async Task<User?> GetByRefreshTokenAsync(
+            string refreshToken,
+            CancellationToken ct = default)
         {
-            return await _context.Users.AnyAsync(u => u.Email == email, ct);
+            return await _context.Users
+                .FirstOrDefaultAsync(
+                    u => u.RefreshToken == refreshToken &&
+                         !u.IsDeleted,
+                    ct);
         }
 
-        public async Task AddAsync(User user, CancellationToken ct = default)
+        public async Task<bool> ExistsByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
-            ArgumentNullException.ThrowIfNull(user);
+            return await _context.Users
+                .AnyAsync(
+                    u => u.Id == id &&
+                         !u.IsDeleted,
+                    ct);
+        }
 
+        public async Task<bool> ExistsByEmailAsync(
+            string email,
+            CancellationToken ct = default)
+        {
+            return await _context.Users
+                .AnyAsync(
+                    u => u.Email == email &&
+                         !u.IsDeleted,
+                    ct);
+        }
+
+        public async Task AddAsync(
+            User user,
+            CancellationToken ct = default)
+        {
             await _context.Users.AddAsync(user, ct);
             await _context.SaveChangesAsync(ct);
         }
 
-        public async Task DeleteAsync(User user, CancellationToken ct = default)
+        public async Task UpdateAsync(
+            User user,
+            CancellationToken ct = default)
         {
-            ArgumentNullException.ThrowIfNull(user);
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync(ct);
+        }
 
-            _context.Users.Remove(user);
+        public async Task SoftDeleteAsync(
+            User user,
+            CancellationToken ct = default)
+        {
+            user.IsDeleted = true;
+            user.DeletedAt = DateTime.UtcNow;
+
+            _context.Users.Update(user);
+
             await _context.SaveChangesAsync(ct);
         }
     }
 }
-

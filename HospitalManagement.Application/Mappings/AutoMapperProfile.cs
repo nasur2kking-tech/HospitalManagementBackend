@@ -1,60 +1,75 @@
 using AutoMapper;
+using HospitalManagement.Domain.Entities;
+
+using HospitalManagement.Application.DTOs.Patient;
+using HospitalManagement.Application.DTOs.Doctor;
 using HospitalManagement.Application.DTOs.Appointment;
 using HospitalManagement.Application.DTOs.Billing;
-using HospitalManagement.Application.DTOs.Doctor;
 using HospitalManagement.Application.DTOs.Medical;
-using HospitalManagement.Application.DTOs.Patient;
 using HospitalManagement.Application.DTOs.User;
-using HospitalManagement.Domain.Entities;
+using HospitalManagement.Application.DTOs.DoctorSchedule;
 
 namespace HospitalManagement.Application.Mappings
 {
-    public class AutoMappingProfile : Profile
+    public class AutoMapperProfile : Profile
     {
-        public AutoMappingProfile()
+        public AutoMapperProfile()
         {
-            // 🔹 USER
-            CreateMap<User, UserDto>()
-                .ForMember(dest => dest.Role,
-                    opt => opt.MapFrom(src => src.Role.ToString()));
-
-            // 🔹 PATIENT
-            CreateMap<Patient, PatientResponseDto>()
-                .ForMember(dest => dest.Name,
-                    opt => opt.MapFrom(src => src.Name));
-
+            // =========================
+            // PATIENT
+            // =========================
+            CreateMap<Patient, PatientResponseDto>();
             CreateMap<CreatePatientDto, Patient>();
+            CreateMap<UpdatePatientDto, Patient>();
 
-            CreateMap<UpdatePatientDto, Patient>()
-                .ForAllMembers(opts =>
-                    opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            // 🔹 DOCTOR
+            // =========================
+            // DOCTOR
+            // =========================
             CreateMap<Doctor, DoctorResponseDto>();
             CreateMap<CreateDoctorDto, Doctor>();
+            CreateMap<UpdateDoctorDto, Doctor>();
 
-            // 🔹 APPOINTMENT
-            CreateMap<Appointment, AppointmentResponseDto>()
-                .ForMember(dest => dest.Status,
-                    opt => opt.MapFrom(src => src.Status.ToString()));
 
+            // =========================
+            // APPOINTMENT
+            // =========================
+            CreateMap<Appointment, AppointmentResponseDto>();
             CreateMap<CreateAppointmentDto, Appointment>();
+            CreateMap<UpdateAppointmentDto, Appointment>();
 
-            CreateMap<UpdateAppointmentDto, Appointment>()
-                .ForMember(dest => dest.Status, opt => opt.Ignore())
-                .ForAllMembers(opts =>
-                    opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            // 🔹 BILL
-            CreateMap<Bill, BillResponseDto>()
-                .ForMember(dest => dest.Status,
-                    opt => opt.MapFrom(src => src.Status.ToString()));
-
+            // =========================
+            // BILLING
+            // =========================
+            CreateMap<Bill, BillResponseDto>();
             CreateMap<CreateBillDto, Bill>();
 
-            // 🔹 MEDICAL RECORD
+
+            // =========================
+            // MEDICAL RECORD
+            // =========================
             CreateMap<MedicalRecord, MedicalRecordDto>();
             CreateMap<CreateMedicalRecordDto, MedicalRecord>();
+
+
+            // =========================
+            // DOCTOR SCHEDULE
+            // =========================
+            CreateMap<DoctorSchedule, DoctorScheduleResponseDto>();
+            CreateMap<CreateDoctorScheduleDto, DoctorSchedule>();
+            CreateMap<UpdateDoctorScheduleDto, DoctorSchedule>();
+
+
+            // =========================
+            // USER
+            // =========================
+            CreateMap<User, UserDto>();
+
+            // Uncomment these if they exist
+            // CreateMap<CreateUserDto, User>();
+            // CreateMap<UpdateUserDto, User>();
+            // CreateMap<User, UserResponseDto>();
         }
     }
 }

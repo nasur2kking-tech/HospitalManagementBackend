@@ -11,7 +11,9 @@ namespace HospitalManagement.Application.Services
         private readonly IUserRepository _repo;
         private readonly IMapper _mapper;
 
-        public UserService(IUserRepository repo, IMapper mapper)
+        public UserService(
+            IUserRepository repo,
+            IMapper mapper)
         {
             _repo = repo;
             _mapper = mapper;
@@ -35,29 +37,36 @@ namespace HospitalManagement.Application.Services
             };
         }
 
-        public async Task<UserDto> GetByIdAsync(int id, CancellationToken ct = default)
+        public async Task<UserDto> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
             var user = await _repo.GetByIdAsync(id, ct);
 
-            if (user == null)
+            if (user is null)
                 throw new ApplicationException("User not found.");
 
             return _mapper.Map<UserDto>(user);
         }
 
-        public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+        public async Task<bool> ExistsAsync(
+            int id,
+            CancellationToken ct = default)
         {
             return await _repo.ExistsByIdAsync(id, ct);
         }
 
-        public async Task DeleteAsync(int id, CancellationToken ct = default)
+        public async Task DeleteAsync(
+            int id,
+            CancellationToken ct = default)
         {
             var user = await _repo.GetByIdAsync(id, ct);
 
-            if (user == null)
+            if (user is null)
                 throw new ApplicationException("User not found.");
 
-            await _repo.DeleteAsync(user, ct);
+            // Soft Delete
+            await _repo.SoftDeleteAsync(user, ct);
         }
     }
 }

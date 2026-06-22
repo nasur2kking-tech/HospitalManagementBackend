@@ -45,7 +45,11 @@ namespace HospitalManagement.API.Controllers
             var record = await _service.GetByIdAsync(id);
 
             if (record == null)
-                return NotFound(new { success = false, message = "Medical record not found" });
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Medical record not found"
+                });
 
             return Ok(new
             {
@@ -75,6 +79,58 @@ namespace HospitalManagement.API.Controllers
         }
 
         /// <summary>
+        /// Upload medical report file
+        /// </summary>
+        [HttpPost("upload-report")]
+        [Authorize(Roles = "Admin,Doctor")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadReport(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "No file uploaded"
+                });
+            }
+
+            if (file.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "File size exceeds limit (5MB)"
+                });
+            }
+
+            var uploadsFolder = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "Uploads"
+            );
+
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var fileUrl = $"{Request.Scheme}://{Request.Host}/Uploads/{fileName}";
+
+            return Ok(new
+            {
+                success = true,
+                fileName,
+                url = fileUrl
+            });
+        }
+
+        /// <summary>
         /// Delete medical record
         /// </summary>
         [HttpDelete("{id:int}")]
@@ -84,7 +140,11 @@ namespace HospitalManagement.API.Controllers
             var record = await _service.GetByIdAsync(id);
 
             if (record == null)
-                return NotFound(new { success = false, message = "Medical record not found" });
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Medical record not found"
+                });
 
             await _service.DeleteAsync(id);
 

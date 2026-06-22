@@ -1,76 +1,133 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
+
 using HospitalManagement.API.Extensions;
-using HospitalManagement.API.Filters;
-using HospitalManagement.Application.DTOs.Auth;
+using HospitalManagement.Application.Mappings;
+using HospitalManagement.Application.Validators;
+
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =========================
-// 🔹 CONTROLLERS + FILTERS
-// =========================
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add<ValidationFilter>();
-});
+// ======================================================
+// CONTROLLERS
+// ======================================================
+
+builder.Services.AddControllers();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
-    options.SuppressModelStateInvalidFilter = true;
+    options.SuppressModelStateInvalidFilter = false;
 });
 
-// =========================
-// 🔹 FLUENT VALIDATION
-// =========================
+// ======================================================
+// FLUENT VALIDATION
+// ======================================================
+
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<RegisterDto>();
 
-// =========================
-// 🔹 AUTOMAPPER
-// =========================
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddValidatorsFromAssemblyContaining<PatientValidator>();
 
-// =========================
-// 🌐 CORS
-// =========================
-builder.Services.AddCors(options =>
+// ======================================================
+// AUTOMAPPER
+// ======================================================
+
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+
+// ======================================================
+// APPLICATION + INFRASTRUCTURE SERVICES
+// ======================================================
+
+builder.Services.AddApplicationServices(
+    builder.Configuration);
+
+// ======================================================
+// SWAGGER
+// ======================================================
+
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+    options.SwaggerDoc(
+        "v1",
+        new OpenApiInfo
+        {
+            Title = "Hospital Management API",
+            Version = "v1"
+        });
+
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description =
+                "Enter JWT token.\n\nExample:\nBearer eyJhbGc..."
+        });
+
+    options.AddSecurityRequirement(
+        new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference =
+                        new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                },
+                Array.Empty<string>()
+            }
+        });
 });
 
-// =========================
-// 🔥 CORE SERVICES
-// =========================
-builder.Services.AddApplicationServices(builder.Configuration);
+// ======================================================
+// BUILD APPLICATION
+// ======================================================
 
-// =========================
-// 🚀 BUILD
-// =========================
 var app = builder.Build();
 
-// =========================
-// 🔥 PIPELINE
-// =========================
-if (app.Environment.IsDevelopment())
+// ======================================================
+// STATIC FILES
+// ======================================================
+
+var uploadsPath =
+    Path.Combine(
+        builder.Environment.ContentRootPath,
+        "Uploads");
+
+if (!Directory.Exists(uploadsPath))
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    Directory.CreateDirectory(uploadsPath);
 }
 
-app.UseHttpsRedirection();
+app.UseStaticFiles(
+    new StaticFileOptions
+    {
+        FileProvider =
+            new PhysicalFileProvider(
+                uploadsPath),
 
-// 🔥 ORDER IS CRITICAL
-app.UseCors("AllowFrontend");
+        RequestPath = "/Uploads"
+    });
 
-app.UseAuthentication();
-app.UseAuthorization();
+// ======================================================
+// CUSTOM PIPELINE
+// ======================================================
 
-app.MapControllers();
+app.UseApplicationPipeline();
+
+// ======================================================
+// RUN APPLICATION
+// ======================================================
 
 app.Run();

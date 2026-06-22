@@ -7,18 +7,16 @@ using HospitalManagement.Domain.Entities;
 
 namespace HospitalManagement.Application.Services
 {
-    public class MedicalRecordService : IMedicalRecordService
+    public class MedicalRecordService(
+        IMedicalRecordRepository repo,
+        IMapper mapper) : IMedicalRecordService
     {
-        private readonly IMedicalRecordRepository _repo;
-        private readonly IMapper _mapper;
+        private readonly IMedicalRecordRepository _repo = repo;
+        private readonly IMapper _mapper = mapper;
 
-        public MedicalRecordService(IMedicalRecordRepository repo, IMapper mapper)
-        {
-            _repo = repo;
-            _mapper = mapper;
-        }
-
-        public async Task<PagedResult<MedicalRecordDto>> GetAllAsync(PaginationParams pagination, CancellationToken ct = default)
+        public async Task<PagedResult<MedicalRecordDto>> GetAllAsync(
+            PaginationParams pagination,
+            CancellationToken ct = default)
         {
             var (items, totalCount) = await _repo.GetAllAsync(
                 pagination.PageNumber,
@@ -34,17 +32,19 @@ namespace HospitalManagement.Application.Services
             };
         }
 
-        public async Task<MedicalRecordDto> GetByIdAsync(int id, CancellationToken ct = default)
+        public async Task<MedicalRecordDto> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
-            var record = await _repo.GetByIdAsync(id, ct);
-
-            if (record == null)
-                throw new ApplicationException("Medical record not found.");
+            var record = await _repo.GetByIdAsync(id, ct)
+                ?? throw new ApplicationException("Medical record not found.");
 
             return _mapper.Map<MedicalRecordDto>(record);
         }
 
-        public async Task<MedicalRecordDto> CreateAsync(CreateMedicalRecordDto dto, CancellationToken ct = default)
+        public async Task<MedicalRecordDto> CreateAsync(
+            CreateMedicalRecordDto dto,
+            CancellationToken ct = default)
         {
             var record = _mapper.Map<MedicalRecord>(dto);
 
@@ -53,20 +53,21 @@ namespace HospitalManagement.Application.Services
             return _mapper.Map<MedicalRecordDto>(record);
         }
 
-        public async Task DeleteAsync(int id, CancellationToken ct = default)
+        public async Task DeleteAsync(
+            int id,
+            CancellationToken ct = default)
         {
-            var record = await _repo.GetByIdAsync(id, ct);
-
-            if (record == null)
-                throw new ApplicationException("Medical record not found.");
+            var record = await _repo.GetByIdAsync(id, ct)
+                ?? throw new ApplicationException("Medical record not found.");
 
             await _repo.DeleteAsync(record, ct);
         }
 
-        public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+        public async Task<bool> ExistsAsync(
+            int id,
+            CancellationToken ct = default)
         {
             return await _repo.ExistsAsync(id, ct);
         }
     }
 }
-

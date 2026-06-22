@@ -5,16 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HospitalManagement.Infrastructure.Repositories.Implementations
 {
-    public class DoctorRepository : IDoctorRepository
+    public class DoctorRepository(ApplicationDbContext context)
+        : IDoctorRepository
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context = context;
 
-    public DoctorRepository(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
-        public async Task<(IEnumerable<Doctor>, int)> GetAllAsync(
+        public async Task<(IEnumerable<Doctor> Items, int TotalCount)> GetAllAsync(
             int pageNumber,
             int pageSize,
             CancellationToken ct = default)
@@ -26,6 +22,7 @@ namespace HospitalManagement.Infrastructure.Repositories.Implementations
             var totalCount = await query.CountAsync(ct);
 
             var items = await query
+                .OrderByDescending(d => d.Id)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
@@ -33,25 +30,35 @@ namespace HospitalManagement.Infrastructure.Repositories.Implementations
             return (items, totalCount);
         }
 
-        public async Task<Doctor?> GetByIdAsync(int id, CancellationToken ct = default)
+        public async Task<Doctor?> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
             return await _context.Doctors
                 .Include(d => d.User)
                 .FirstOrDefaultAsync(d => d.Id == id, ct);
         }
 
-        public async Task<Doctor?> GetByUserIdAsync(int userId, CancellationToken ct = default)
+        public async Task<Doctor?> GetByUserIdAsync(
+            int userId,
+            CancellationToken ct = default)
         {
             return await _context.Doctors
+                .Include(d => d.User)
                 .FirstOrDefaultAsync(d => d.UserId == userId, ct);
         }
 
-        public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+        public async Task<bool> ExistsAsync(
+            int id,
+            CancellationToken ct = default)
         {
-            return await _context.Doctors.AnyAsync(d => d.Id == id, ct);
+            return await _context.Doctors
+                .AnyAsync(d => d.Id == id, ct);
         }
 
-        public async Task AddAsync(Doctor doctor, CancellationToken ct = default)
+        public async Task AddAsync(
+            Doctor doctor,
+            CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(doctor);
 
@@ -59,22 +66,29 @@ namespace HospitalManagement.Infrastructure.Repositories.Implementations
             await _context.SaveChangesAsync(ct);
         }
 
-        public async Task UpdateAsync(Doctor doctor, CancellationToken ct = default)
+        public async Task UpdateAsync(
+            Doctor doctor,
+            CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(doctor);
 
             _context.Doctors.Update(doctor);
+
             await _context.SaveChangesAsync(ct);
         }
 
-        public async Task DeleteAsync(Doctor doctor, CancellationToken ct = default)
+        public async Task SoftDeleteAsync(
+            Doctor doctor,
+            CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(doctor);
 
-            _context.Doctors.Remove(doctor);
+            doctor.IsDeleted = true;
+            doctor.DeletedAt = DateTime.UtcNow;
+
+            _context.Doctors.Update(doctor);
+
             await _context.SaveChangesAsync(ct);
         }
     }
-
-
 }

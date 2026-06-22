@@ -9,7 +9,8 @@ namespace HospitalManagement.Application.Services
 {
     public class DoctorService(
         IDoctorRepository repo,
-        IMapper mapper) : IDoctorService
+        IMapper mapper)
+        : IDoctorService
     {
         private readonly IDoctorRepository _repo = repo;
         private readonly IMapper _mapper = mapper;
@@ -32,10 +33,12 @@ namespace HospitalManagement.Application.Services
             };
         }
 
-        public async Task<DoctorResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
+        public async Task<DoctorResponseDto> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
             var doctor = await _repo.GetByIdAsync(id, ct)
-                         ?? throw new ApplicationException("Doctor not found.");
+                ?? throw new ApplicationException("Doctor not found.");
 
             return _mapper.Map<DoctorResponseDto>(doctor);
         }
@@ -47,7 +50,8 @@ namespace HospitalManagement.Application.Services
             var existing = await _repo.GetByUserIdAsync(dto.UserId, ct);
 
             if (existing is not null)
-                throw new ApplicationException("Doctor profile already exists for this user.");
+                throw new ApplicationException(
+                    "Doctor profile already exists for this user.");
 
             var doctor = _mapper.Map<Doctor>(dto);
 
@@ -56,29 +60,32 @@ namespace HospitalManagement.Application.Services
             return _mapper.Map<DoctorResponseDto>(doctor);
         }
 
-        // ✅ FIXED METHOD SIGNATURE
         public async Task UpdateAsync(
             int id,
             UpdateDoctorDto dto,
             CancellationToken ct = default)
         {
             var doctor = await _repo.GetByIdAsync(id, ct)
-                         ?? throw new ApplicationException("Doctor not found.");
+                ?? throw new ApplicationException("Doctor not found.");
 
             _mapper.Map(dto, doctor);
 
             await _repo.UpdateAsync(doctor, ct);
         }
 
-        public async Task DeleteAsync(int id, CancellationToken ct = default)
+        public async Task DeleteAsync(
+            int id,
+            CancellationToken ct = default)
         {
             var doctor = await _repo.GetByIdAsync(id, ct)
-                         ?? throw new ApplicationException("Doctor not found.");
+                ?? throw new ApplicationException("Doctor not found.");
 
-            await _repo.DeleteAsync(doctor, ct);
+            await _repo.SoftDeleteAsync(doctor, ct);
         }
 
-        public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+        public async Task<bool> ExistsAsync(
+            int id,
+            CancellationToken ct = default)
         {
             return await _repo.ExistsAsync(id, ct);
         }

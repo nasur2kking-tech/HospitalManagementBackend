@@ -1,4 +1,5 @@
 using HospitalManagement.Application.Interfaces;
+using BCrypt.Net;
 
 namespace HospitalManagement.Infrastructure.Identity
 {
@@ -6,16 +7,11 @@ namespace HospitalManagement.Infrastructure.Identity
     {
         public string HashPassword(string password)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(password);
-
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
 
         public bool VerifyPassword(string password, string hash)
         {
-            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(hash))
-                return false;
-
             return BCrypt.Net.BCrypt.Verify(password, hash);
         }
     }

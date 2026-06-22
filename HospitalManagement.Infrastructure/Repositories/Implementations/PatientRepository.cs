@@ -3,71 +3,81 @@ using HospitalManagement.Domain.Entities;
 using HospitalManagement.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace HospitalManagement.Infrastructure.Repositories.Implementations
+namespace HospitalManagement.Infrastructure.Repositories.Implementations;
+
+public class PatientRepository(ApplicationDbContext context) : IPatientRepository
 {
-    public class PatientRepository : IPatientRepository
+    public async Task<(IEnumerable<Patient> Patients, int TotalCount)> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        CancellationToken ct = default)
     {
-        private readonly ApplicationDbContext _context;
+        var query = context.Patients
+            .Include(p => p.User)
+            .AsNoTracking();
 
-        public PatientRepository(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        var totalCount = await query.CountAsync(ct);
 
-        public async Task<(IEnumerable<Patient>, int)> GetAllAsync(
-            int pageNumber,
-            int pageSize,
-            CancellationToken ct = default)
-        {
-            var query = _context.Patients
-                .Include(p => p.User)
-                .AsNoTracking();
+        var patients = await query
+            .OrderByDescending(p => p.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
 
-            var totalCount = await query.CountAsync(ct);
+        return (patients, totalCount);
+    }
 
-            var items = await query
-                .OrderByDescending(p => p.Id)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(ct);
+    public async Task<Patient?> GetByIdAsync(
+        int id,
+        CancellationToken ct = default)
+    {
+        return await context.Patients
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+    }
 
-            return (items, totalCount);
-        }
+    public async Task<Patient?> GetByUserIdAsync(
+        int userId,
+        CancellationToken ct = default)
+    {
+        return await context.Patients
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.UserId == userId, ct);
+    }
 
-        public async Task<Patient?> GetByIdAsync(int id, CancellationToken ct = default)
-        {
-            return await _context.Patients
-                .Include(p => p.User)
-                .FirstOrDefaultAsync(p => p.Id == id, ct);
-        }
+    public async Task<bool> ExistsAsync(
+        int id,
+        CancellationToken ct = default)
+    {
+        return await context.Patients
+            .AnyAsync(p => p.Id == id, ct);
+    }
 
-        public async Task<Patient?> GetByUserIdAsync(int userId, CancellationToken ct = default)
-        {
-            return await _context.Patients
-                .FirstOrDefaultAsync(p => p.UserId == userId, ct);
-        }
+    public async Task AddAsync(
+        Patient patient,
+        CancellationToken ct = default)
+    {
+        await context.Patients.AddAsync(patient, ct);
+        await context.SaveChangesAsync(ct);
+    }
 
-        public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
-        {
-            return await _context.Patients.AnyAsync(p => p.Id == id, ct);
-        }
+    public async Task UpdateAsync(
+        Patient patient,
+        CancellationToken ct = default)
+    {
+        context.Patients.Update(patient);
+        await context.SaveChangesAsync(ct);
+    }
 
-        public async Task AddAsync(Patient patient, CancellationToken ct = default)
-        {
-            await _context.Patients.AddAsync(patient, ct);
-            await _context.SaveChangesAsync(ct);
-        }
+    public async Task SoftDeleteAsync(
+        Patient patient,
+        CancellationToken ct = default)
+    {
+        patient.IsDeleted = true;
+        patient.DeletedAt = DateTime.UtcNow;
 
-        public async Task UpdateAsync(Patient patient, CancellationToken ct = default)
-        {
-            _context.Patients.Update(patient);
-            await _context.SaveChangesAsync(ct);
-        }
+        context.Patients.Update(patient);
 
-        public async Task DeleteAsync(Patient patient, CancellationToken ct = default)
-        {
-            _context.Patients.Remove(patient);
-            await _context.SaveChangesAsync(ct);
-        }
+        await context.SaveChangesAsync(ct);
     }
 }

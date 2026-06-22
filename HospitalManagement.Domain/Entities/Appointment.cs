@@ -1,25 +1,32 @@
-﻿using HospitalManagement.Domain.Enums;
+﻿using HospitalManagement.Domain.Common;
+using HospitalManagement.Domain.Enums;
 
 namespace HospitalManagement.Domain.Entities
 {
-    public class Appointment
+    public class Appointment : AuditableEntity
     {
         public int Id { get; set; }
 
         public int PatientId { get; set; }
+
         public int DoctorId { get; set; }
 
         public DateTime AppointmentDate { get; set; }
-        public string TimeSlot { get; set; } = string.Empty;
 
-        public AppointmentStatus Status { get; set; } = AppointmentStatus.Scheduled;
+        public string TimeSlot { get; set; }
+            = string.Empty;
+
+        public AppointmentStatus Status { get; set; }
+            = AppointmentStatus.Scheduled;
 
         public string? Reason { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? Notes { get; set; }
 
-        // Navigation
-        public Patient Patient { get; set; } = null!;
-        public Doctor Doctor { get; set; } = null!;
+        public Patient Patient { get; set; }
+            = null!;
+
+        public Doctor Doctor { get; set; }
+            = null!;
     }
 }

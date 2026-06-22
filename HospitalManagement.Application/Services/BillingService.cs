@@ -10,7 +10,8 @@ namespace HospitalManagement.Application.Services
 {
     public class BillingService(
         IBillingRepository repo,
-        IMapper mapper) : IBillingService
+        IMapper mapper)
+        : IBillingService
     {
         private readonly IBillingRepository _repo = repo;
         private readonly IMapper _mapper = mapper;
@@ -33,10 +34,12 @@ namespace HospitalManagement.Application.Services
             };
         }
 
-        public async Task<BillResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
+        public async Task<BillResponseDto> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
             var bill = await _repo.GetByIdAsync(id, ct)
-                       ?? throw new ApplicationException("Bill not found.");
+                ?? throw new ApplicationException("Bill not found.");
 
             return _mapper.Map<BillResponseDto>(bill);
         }
@@ -60,26 +63,35 @@ namespace HospitalManagement.Application.Services
             CancellationToken ct = default)
         {
             var bill = await _repo.GetByIdAsync(id, ct)
-                       ?? throw new ApplicationException("Bill not found.");
+                ?? throw new ApplicationException("Bill not found.");
 
-            if (!Enum.TryParse<PaymentStatus>(status, true, out var parsedStatus))
-                throw new ApplicationException("Invalid payment status.");
+            if (!Enum.TryParse<PaymentStatus>(
+                    status,
+                    true,
+                    out var parsedStatus))
+            {
+                throw new ApplicationException(
+                    "Invalid payment status.");
+            }
 
             bill.Status = parsedStatus;
 
             await _repo.UpdateAsync(bill, ct);
         }
 
-        // ✅ FIXED: MISSING METHOD
-        public async Task DeleteAsync(int id, CancellationToken ct = default)
+        public async Task DeleteAsync(
+            int id,
+            CancellationToken ct = default)
         {
-            var bill = await _repo.GetByIdAsync(id, ct)
-                       ?? throw new ApplicationException("Bill not found.");
+            if (!await _repo.ExistsAsync(id, ct))
+                throw new ApplicationException("Bill not found.");
 
-            await _repo.UpdateAsync(bill, ct); // ❌ wrong (see below)
+            await _repo.DeleteAsync(id, ct);
         }
 
-        public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+        public async Task<bool> ExistsAsync(
+            int id,
+            CancellationToken ct = default)
         {
             return await _repo.ExistsAsync(id, ct);
         }

@@ -7,24 +7,18 @@ using HospitalManagement.Domain.Entities;
 
 namespace HospitalManagement.Application.Services
 {
-    public class PatientService : IPatientService
+    public class PatientService(
+        IPatientRepository repo,
+        IUserRepository userRepo,
+        IMapper mapper)
+        : IPatientService
     {
-        private readonly IPatientRepository _repo;
-        private readonly IUserRepository _userRepo;
-        private readonly IMapper _mapper;
-
-        public PatientService(
-            IPatientRepository repo,
-            IUserRepository userRepo,
-            IMapper mapper)
-        {
-            _repo = repo;
-            _userRepo = userRepo;
-            _mapper = mapper;
-        }
+        private readonly IPatientRepository _repo = repo;
+        private readonly IUserRepository _userRepo = userRepo;
+        private readonly IMapper _mapper = mapper;
 
         // =========================
-        // 🔹 GET ALL (PAGINATION)
+        // GET ALL
         // =========================
         public async Task<PagedResult<PatientResponseDto>> GetAllAsync(
             PaginationParams pagination,
@@ -48,40 +42,43 @@ namespace HospitalManagement.Application.Services
         }
 
         // =========================
-        // 🔹 GET BY ID
+        // GET BY ID
         // =========================
-        public async Task<PatientResponseDto> GetByIdAsync(int id, CancellationToken ct = default)
+        public async Task<PatientResponseDto> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
             if (id <= 0)
                 throw new ApplicationException("Invalid patient ID.");
 
             var patient = await _repo.GetByIdAsync(id, ct);
 
-            if (patient == null)
+            if (patient is null)
                 throw new ApplicationException("Patient not found.");
 
             return _mapper.Map<PatientResponseDto>(patient);
         }
 
         // =========================
-        // 🔹 CREATE
+        // CREATE
         // =========================
-        public async Task<PatientResponseDto> CreateAsync(CreatePatientDto dto, CancellationToken ct = default)
+        public async Task<PatientResponseDto> CreateAsync(
+            CreatePatientDto dto,
+            CancellationToken ct = default)
         {
-            if (dto == null)
-                throw new ApplicationException("Invalid request.");
+            ArgumentNullException.ThrowIfNull(dto);
 
             if (dto.UserId <= 0)
                 throw new ApplicationException("Invalid UserId.");
 
-            // 🔥 Check user exists
             var user = await _userRepo.GetByIdAsync(dto.UserId, ct);
-            if (user == null)
+
+            if (user is null)
                 throw new ApplicationException("User not found.");
 
-            // 🔥 Prevent duplicate patient per user
-            var existing = await _repo.GetByUserIdAsync(dto.UserId, ct);
-            if (existing != null)
+            var existingPatient = await _repo.GetByUserIdAsync(dto.UserId, ct);
+
+            if (existingPatient is not null)
                 throw new ApplicationException("Patient already exists for this user.");
 
             var patient = _mapper.Map<Patient>(dto);
@@ -92,16 +89,19 @@ namespace HospitalManagement.Application.Services
         }
 
         // =========================
-        // 🔹 UPDATE
+        // UPDATE
         // =========================
-        public async Task UpdateAsync(int id, UpdatePatientDto dto, CancellationToken ct = default)
+        public async Task UpdateAsync(
+            int id,
+            UpdatePatientDto dto,
+            CancellationToken ct = default)
         {
             if (id <= 0)
                 throw new ApplicationException("Invalid patient ID.");
 
             var patient = await _repo.GetByIdAsync(id, ct);
 
-            if (patient == null)
+            if (patient is null)
                 throw new ApplicationException("Patient not found.");
 
             _mapper.Map(dto, patient);
@@ -110,25 +110,29 @@ namespace HospitalManagement.Application.Services
         }
 
         // =========================
-        // 🔹 DELETE
+        // SOFT DELETE
         // =========================
-        public async Task DeleteAsync(int id, CancellationToken ct = default)
+        public async Task DeleteAsync(
+            int id,
+            CancellationToken ct = default)
         {
             if (id <= 0)
                 throw new ApplicationException("Invalid patient ID.");
 
             var patient = await _repo.GetByIdAsync(id, ct);
 
-            if (patient == null)
+            if (patient is null)
                 throw new ApplicationException("Patient not found.");
 
-            await _repo.DeleteAsync(patient, ct);
+            await _repo.SoftDeleteAsync(patient, ct);
         }
 
         // =========================
-        // 🔹 EXISTS
+        // EXISTS
         // =========================
-        public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+        public async Task<bool> ExistsAsync(
+            int id,
+            CancellationToken ct = default)
         {
             if (id <= 0)
                 return false;
