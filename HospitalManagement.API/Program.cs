@@ -21,6 +21,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 
 // FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
+
 builder.Services.AddValidatorsFromAssemblyContaining<PatientValidator>();
 
 // AutoMapper
@@ -34,14 +35,16 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1",
+    options.SwaggerDoc(
+        "v1",
         new OpenApiInfo
         {
             Title = "Hospital Management API",
             Version = "v1"
         });
 
-    options.AddSecurityDefinition("Bearer",
+    options.AddSecurityDefinition(
+        "Bearer",
         new OpenApiSecurityScheme
         {
             Name = "Authorization",
@@ -58,11 +61,12 @@ builder.Services.AddSwaggerGen(options =>
             {
                 new OpenApiSecurityScheme
                 {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
+                    Reference =
+                        new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
                 },
                 Array.Empty<string>()
             }
@@ -76,7 +80,11 @@ app.UseSwagger();
 
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hospital Management API v1");
+    c.SwaggerEndpoint(
+        "/swagger/v1/swagger.json",
+        "Hospital Management API v1");
+
+    c.RoutePrefix = "swagger";
 });
 
 // Root endpoint
@@ -90,20 +98,27 @@ app.MapGet("/", () =>
 });
 
 // Uploads folder
-var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "Uploads");
+var uploadsPath =
+    Path.Combine(
+        app.Environment.ContentRootPath,
+        "Uploads");
 
 if (!Directory.Exists(uploadsPath))
 {
     Directory.CreateDirectory(uploadsPath);
 }
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/Uploads"
-});
+app.UseStaticFiles(
+    new StaticFileOptions
+    {
+        FileProvider =
+            new PhysicalFileProvider(
+                uploadsPath),
 
-// Existing custom pipeline
+        RequestPath = "/Uploads"
+    });
+
+// Custom pipeline
 app.UseApplicationPipeline();
 
 app.Run();
